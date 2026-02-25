@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Mandate {
+  id        String           @id @default(cuid())
+  name      String
+  createdAt DateTime         @default(now())
+  versions  MandateVersion[]
+}
+
+model MandateVersion {
+  id             String       @id @default(cuid())
+  mandateId      String
+  mandate        Mandate      @relation(fields: [mandateId], references: [id])
+  version        Int
+  weights        String       // JSON string
+  riskTolerance  String       // CONSERVATIVE | MODERATE | AGGRESSIVE
+  nonNegotiables String       // JSON string array
+  createdAt      DateTime     @default(now())
+  checksum       String
+  isActive       Boolean      @default(false)
+  evaluations    Evaluation[]
+
+  @@unique([mandateId, version])
+}
+
+model Proposal {
+  id        String            @id @default(cuid())
+  createdAt DateTime          @default(now())
+  versions  ProposalVersion[]
+}
+
+model ProposalVersion {
+  id           String       @id @default(cuid())
+  proposalId   String
+  proposal     Proposal     @relation(fields: [proposalId], references: [id])
+  version      Int
+  title        String
+  summary      String
+  assumptions  String       // JSON string array
+  scope        String
+  dependencies String       // JSON string array
+  createdAt    DateTime     @default(now())
+  checksum     String
+  evaluations  Evaluation[]
+
+  @@unique([proposalId, version])
+}
+
+model PromptVersion {
+  id        String   @id @default(cuid())
+  name      String
+  version   Int
+  template  String
+  createdAt DateTime @default(now())
+  checksum  String
+
+  @@unique([name, version])
+}
+
+model Evaluation {
+  id                String             @id @default(cuid())
+  mandateVersionId  String
+  mandateVersion    MandateVersion     @relation(fields: [mandateVersionId], references: [id])
+  proposalVersionId String
+  proposalVersion   ProposalVersion    @relation(fields: [proposalVersionId], references: [id])
+  decisionObject    String             // JSON
+  inputsSnapshot    String             // JSON
+  modelTrace        String             // JSON
+  createdAt         DateTime           @default(now())
+  overrides         OverrideDecision[]
+}
+
+model OverrideDecision {
+  id           String     @id @default(cuid())
+  evaluationId String
+  evaluation   Evaluation @relation(fields: [evaluationId], references: [id])
+  actor        String
+  decision     String     // APPROVE | REJECT | ESCALATE
+  rationale    String
+  createdAt    DateTime   @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actor      String
+  action     String
+  entityType String
+  entityId   String
+  before     String?  // JSON
+  after      String?  // JSON
+  rationale  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

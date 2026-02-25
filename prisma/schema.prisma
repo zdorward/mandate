@@ -18,9 +18,10 @@ model MandateVersion {
   mandateId      String
   mandate        Mandate      @relation(fields: [mandateId], references: [id])
   version        Int
-  weights        String       // JSON string
-  riskTolerance  String       // CONSERVATIVE | MODERATE | AGGRESSIVE
-  nonNegotiables String       // JSON string array
+  weights        String?      // JSON string (deprecated, nullable for new versions)
+  riskTolerance  String?      // CONSERVATIVE | MODERATE | AGGRESSIVE (deprecated)
+  nonNegotiables String?      // JSON string array (deprecated)
+  outcomes       String?      // JSON string array - ranked list of outcomes
   createdAt      DateTime     @default(now())
   checksum       String
   isActive       Boolean      @default(false)

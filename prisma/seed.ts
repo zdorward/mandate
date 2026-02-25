@@ -20,56 +20,37 @@ async function main() {
     },
   })
 
-  // Create MandateVersions
+  // Create MandateVersion with outcomes
   const mandateV1Data = {
-    weights: { growth: 0.4, cost: 0.2, risk: 0.3, brand: 0.1 },
-    riskTolerance: 'MODERATE',
-    nonNegotiables: ['No layoffs', 'Budget must not exceed $500k'],
+    outcomes: [
+      'Increase revenue growth by 20%',
+      'Expand into new markets',
+      'Maintain customer satisfaction above 90%',
+      'Keep operational costs flat',
+    ],
   }
 
   await prisma.mandateVersion.create({
     data: {
       mandateId: mandate.id,
       version: 1,
-      weights: JSON.stringify(mandateV1Data.weights),
-      riskTolerance: mandateV1Data.riskTolerance,
-      nonNegotiables: JSON.stringify(mandateV1Data.nonNegotiables),
+      outcomes: JSON.stringify(mandateV1Data.outcomes),
       checksum: computeChecksum(mandateV1Data),
-      isActive: false,
-    },
-  })
-
-  const mandateV2Data = {
-    weights: { growth: 0.5, cost: 0.15, risk: 0.25, brand: 0.1 },
-    riskTolerance: 'MODERATE',
-    nonNegotiables: ['No layoffs', 'Budget must not exceed $750k', 'Data privacy must be maintained'],
-  }
-
-  await prisma.mandateVersion.create({
-    data: {
-      mandateId: mandate.id,
-      version: 2,
-      weights: JSON.stringify(mandateV2Data.weights),
-      riskTolerance: mandateV2Data.riskTolerance,
-      nonNegotiables: JSON.stringify(mandateV2Data.nonNegotiables),
-      checksum: computeChecksum(mandateV2Data),
       isActive: true,
     },
   })
 
-  // Create Proposals
-  // Proposal 1: APAC Expansion (should APPROVE)
+  // Create Proposals (keep the same)
   const proposal1 = await prisma.proposal.create({ data: {} })
   const p1v1Data = {
     title: 'APAC Market Expansion',
-    summary: 'Expand operations to Singapore and Japan markets with phased rollout over 6 months. Initial focus on enterprise customers.',
+    summary: 'Expand operations to Singapore and Japan markets with phased rollout over 6 months.',
     assumptions: [
       'Local partners available for distribution',
       'Product localization can be completed in 3 months',
-      'Regulatory approval timeline is 2 months',
     ],
-    scope: 'Phase 1: Singapore (Month 1-3), Phase 2: Japan (Month 4-6). Includes local hiring, partner agreements, and marketing launch.',
-    dependencies: ['Legal team for contracts', 'Product team for localization', 'Finance for FX management'],
+    scope: 'Phase 1: Singapore (Month 1-3), Phase 2: Japan (Month 4-6).',
+    dependencies: ['Legal team for contracts', 'Product team for localization'],
   }
 
   await prisma.proposalVersion.create({
@@ -85,17 +66,13 @@ async function main() {
     },
   })
 
-  // Proposal 2: Cost Cutting (should ESCALATE - violates constraint)
   const proposal2 = await prisma.proposal.create({ data: {} })
   const p2v1Data = {
     title: 'Operational Efficiency Initiative',
-    summary: 'Reduce operational costs by 20% through process automation and workforce optimization including targeted layoffs.',
-    assumptions: [
-      'Automation tools can replace 30% of manual processes',
-      'Affected employees can be retrained or transitioned',
-    ],
-    scope: 'Q1: Process audit, Q2: Automation implementation, Q3: Workforce restructuring with layoffs in underperforming units.',
-    dependencies: ['HR for workforce planning', 'IT for automation tools', 'Legal for compliance'],
+    summary: 'Reduce operational costs by 20% through process automation.',
+    assumptions: ['Automation tools can replace 30% of manual processes'],
+    scope: 'Q1: Process audit, Q2: Automation implementation.',
+    dependencies: ['IT for automation tools'],
   }
 
   await prisma.proposalVersion.create({
@@ -111,7 +88,6 @@ async function main() {
     },
   })
 
-  // Proposal 3: Vague R&D (should ESCALATE - low confidence)
   const proposal3 = await prisma.proposal.create({ data: {} })
   const p3v1Data = {
     title: 'Innovation Lab Setup',
@@ -138,15 +114,13 @@ async function main() {
   await prisma.promptVersion.create({
     data: {
       name: 'riskDiscovery',
-      version: 1,
-      template: 'Risk discovery prompt template v1',
-      checksum: computeChecksum({ name: 'riskDiscovery', version: 1 }),
+      version: 2,
+      template: 'Risk discovery prompt template v2 - outcomes based',
+      checksum: computeChecksum({ name: 'riskDiscovery', version: 2 }),
     },
   })
 
   console.log('Seed completed successfully')
-  console.log(`Created mandate: ${mandate.id}`)
-  console.log(`Created proposals: ${proposal1.id}, ${proposal2.id}, ${proposal3.id}`)
 }
 
 main()

@@ -1,36 +1,142 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mandate
 
-## Getting Started
+AI-native decision governance system. AI owns risk discovery and tradeoff analysis. Humans retain accountability for values, priorities, and irreversible decisions.
 
-First, run the development server:
+## Quick Start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# Install dependencies
+pnpm install
+
+# Set up database
+pnpm prisma migrate dev
+
+# Seed demo data
+pnpm prisma db seed
+
+# Start development server
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create `.env`:
 
-## Learn More
+```env
+DATABASE_URL="file:./dev.db"
 
-To learn more about Next.js, take a look at the following resources:
+# Optional: For real AI risk discovery (falls back to realistic mocks)
+OPENAI_API_KEY=your-key-here
+OPENAI_BASE_URL=https://api.openai.com/v1  # Or compatible endpoint
+OPENAI_MODEL=gpt-4o
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Demo Script (2-3 min)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 1. Show the Mandate (30s)
+- Navigate to `/mandate`
+- Point out: priorities (growth, cost, risk, brand weights), risk tolerance, non-negotiables
+- "This is what the organization has decided matters. AI can't change this."
 
-## Deploy on Vercel
+### 2. Evaluate a Good Proposal (45s)
+- Go to `/proposals` → click "APAC Market Expansion"
+- Click "Evaluate Against Mandate"
+- Walk through the Decision Object:
+  - Recommendation banner (APPROVE)
+  - Impact estimates
+  - Top 3 unseen risks (AI-discovered)
+  - Confidence score with reasons
+- "AI found risks humans might miss. But the recommendation is advisory."
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3. Trigger Escalation (45s)
+- Go back to `/proposals` → click "Operational Efficiency Initiative"
+- Evaluate it
+- Show: ESCALATE recommendation, constraint violation (mentions layoffs), human_required=true
+- "The system detected a non-negotiable violation. It refuses to approve."
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 4. Override Flow (30s)
+- Still on evaluation page, scroll to Override section
+- Enter your name, select APPROVE, type rationale (20+ chars)
+- Submit
+- Show audit log at bottom
+- "Human can override, but must justify. Everything is logged."
+
+### 5. Low Confidence Case (30s)
+- Evaluate "Innovation Lab Setup"
+- Show: ESCALATE due to low confidence
+- Point out missing assumptions, vague scope
+- "AI knows when it doesn't have enough information."
+
+## Human Boundaries
+
+**AI Owns:**
+- Risk discovery (implicit assumptions, second-order effects, tail risks)
+- Tradeoff scoring against mandate weights
+- Confidence computation
+- Escalation triggers
+
+**Human Owns:**
+- Setting the mandate (priorities, risk tolerance, non-negotiables)
+- Final approval/rejection decisions
+- Override authority with justification
+- Defining what "non-negotiable" means
+
+## Reproducibility
+
+Every evaluation captures:
+- `inputsSnapshot`: Frozen mandate + proposal at evaluation time
+- `modelTrace`: Provider, model, prompt version, latency
+- Checksums on all versioned entities
+
+Re-running with the same inputs and prompt version produces identical deterministic scores. LLM output may vary but is captured in trace.
+
+## Testing
+
+```bash
+# Run CLI harness on all seeded proposals
+pnpm harness
+
+# Run on specific proposal
+pnpm harness --proposal=<proposal-id>
+
+# Or use the UI at /dev/harness
+```
+
+## What Breaks at Scale
+
+| Limitation | Production Fix |
+|------------|----------------|
+| SQLite (single-writer) | PostgreSQL with connection pooling |
+| Sync evaluation (blocks 5-10s) | Background jobs + SSE/polling |
+| No authentication | NextAuth + RBAC |
+| No rate limiting | Token budgets per evaluation |
+| Single prompt version | Prompt management + A/B testing |
+| In-memory only | Redis for caching + job queue |
+
+## Architecture
+
+```
+lib/engine/           # Deterministic evaluation logic
+  ├── featureBuilder    # Extract proposal features
+  ├── deterministicScorer # Impact/tradeoff scoring
+  ├── escalationPolicy  # Human-required rules
+  ├── confidenceComputation
+  └── pipeline          # Orchestrates flow
+
+lib/ai/               # AI integration
+  ├── client           # OpenAI SDK wrapper
+  ├── riskDiscovery    # LLM risk analysis
+  ├── prompts          # Prompt templates
+  ├── mock             # Demo mode responses
+  └── jsonGuard        # Strict JSON validation
+
+app/api/              # Next.js Route Handlers
+app/                  # React pages
+prisma/               # Database schema + seed
+```
+
+## License
+
+MIT

@@ -108,25 +108,31 @@ export default function HarnessPage() {
     setRunning(false)
   }
 
-  if (loading) return <div>Loading...</div>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Evaluation Harness</h1>
-        <p className="text-muted-foreground mt-2">
+    <div className="space-y-8">
+      <div className="pt-4">
+        <h1 className="text-4xl font-bold tracking-tight">Evaluation Harness</h1>
+        <p className="text-muted-foreground mt-2 text-lg">
           Test evaluation pipeline on seeded proposals
         </p>
       </div>
 
-      <Card>
+      <Card className="bg-white border-border">
         <CardHeader>
           <CardTitle>Run Evaluation</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-4">
             <Select value={selectedProposalId} onValueChange={setSelectedProposalId}>
-              <SelectTrigger className="w-[300px]">
+              <SelectTrigger className="w-[300px] bg-secondary border-border cursor-pointer">
                 <SelectValue placeholder="Select proposal" />
               </SelectTrigger>
               <SelectContent>
@@ -137,7 +143,7 @@ export default function HarnessPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={runEvaluation} disabled={!selectedProposalId || running}>
+            <Button onClick={runEvaluation} disabled={!selectedProposalId || running} className="bg-foreground hover:bg-foreground/90 text-background cursor-pointer">
               {running ? 'Running...' : 'Run Evaluation'}
             </Button>
           </div>
@@ -145,7 +151,7 @@ export default function HarnessPage() {
       </Card>
 
       {result && (
-        <Card>
+        <Card className="bg-white border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Result

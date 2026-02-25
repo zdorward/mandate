@@ -82,7 +82,13 @@ export default function MandatePage() {
     await fetchMandates()
   }
 
-  if (loading) return <div>Loading...</div>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    )
+  }
 
   const mandate = mandates[0]
   const activeVersion = mandate?.versions.find(v => v.isActive)
@@ -90,16 +96,16 @@ export default function MandatePage() {
   const activeNonNeg = activeVersion ? JSON.parse(activeVersion.nonNegotiables) : []
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Mandate</h1>
-        <p className="text-muted-foreground mt-2">
+    <div className="space-y-8">
+      <div className="pt-4">
+        <h1 className="text-4xl font-bold tracking-tight">Mandate</h1>
+        <p className="text-muted-foreground mt-2 text-lg">
           Define organizational priorities and constraints
         </p>
       </div>
 
       {activeVersion && (
-        <Card>
+        <Card className="bg-white border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Active Mandate
@@ -139,7 +145,7 @@ export default function MandatePage() {
         </Card>
       )}
 
-      <Card>
+      <Card className="bg-white border-border">
         <CardHeader>
           <CardTitle>Create New Version</CardTitle>
         </CardHeader>
@@ -155,6 +161,7 @@ export default function MandatePage() {
                   step="0.1"
                   value={form[key as keyof typeof form]}
                   onChange={(e) => setForm({ ...form, [key]: parseFloat(e.target.value) })}
+                  className="bg-secondary border-border"
                 />
               </div>
             ))}
@@ -162,7 +169,7 @@ export default function MandatePage() {
           <div className="space-y-2">
             <Label>Risk Tolerance</Label>
             <Select value={form.riskTolerance} onValueChange={(v) => setForm({ ...form, riskTolerance: v })}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-secondary border-border cursor-pointer">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -175,19 +182,19 @@ export default function MandatePage() {
           <div className="space-y-2">
             <Label>Non-Negotiables (one per line)</Label>
             <textarea
-              className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="w-full min-h-[100px] rounded-xl border border-border bg-secondary px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               value={form.nonNegotiables}
               onChange={(e) => setForm({ ...form, nonNegotiables: e.target.value })}
               placeholder="No layoffs&#10;Budget must not exceed $500k"
             />
           </div>
-          <Button onClick={createVersion} disabled={creating}>
+          <Button onClick={createVersion} disabled={creating} className="bg-foreground hover:bg-foreground/90 text-background cursor-pointer">
             {creating ? 'Creating...' : 'Create Version'}
           </Button>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="bg-white border-border">
         <CardHeader>
           <CardTitle>Version History</CardTitle>
         </CardHeader>
@@ -213,7 +220,7 @@ export default function MandatePage() {
                   </TableCell>
                   <TableCell>
                     {!v.isActive && (
-                      <Button variant="outline" size="sm" onClick={() => activateVersion(v.id)}>
+                      <Button variant="outline" size="sm" onClick={() => activateVersion(v.id)} className="cursor-pointer">
                         Activate
                       </Button>
                     )}

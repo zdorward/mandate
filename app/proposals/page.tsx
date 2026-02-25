@@ -63,29 +63,38 @@ export default function ProposalsPage() {
     setCreating(false)
   }
 
-  if (loading) return <div>Loading...</div>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-8">
+      <div className="flex justify-between items-center pt-4">
         <div>
-          <h1 className="text-3xl font-bold">Proposals</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-4xl font-bold tracking-tight">Proposals</h1>
+          <p className="text-muted-foreground mt-2 text-lg">
             Submit and evaluate business proposals
           </p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button>New Proposal</Button>
+            <Button className="bg-foreground hover:bg-foreground/90 text-background rounded-xl h-12 px-6 cursor-pointer">
+              New Proposal
+            </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl bg-white border-border">
             <DialogHeader>
-              <DialogTitle>Create Proposal</DialogTitle>
+              <DialogTitle className="text-xl">Create Proposal</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label>Title</Label>
                 <Input
+                  className="rounded-xl bg-secondary border-border h-12"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   placeholder="APAC Market Expansion"
@@ -94,7 +103,7 @@ export default function ProposalsPage() {
               <div className="space-y-2">
                 <Label>Summary</Label>
                 <textarea
-                  className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="w-full min-h-[80px] rounded-xl border border-border bg-secondary px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   value={form.summary}
                   onChange={(e) => setForm({ ...form, summary: e.target.value })}
                   placeholder="Brief description of the proposal..."
@@ -103,7 +112,7 @@ export default function ProposalsPage() {
               <div className="space-y-2">
                 <Label>Scope</Label>
                 <textarea
-                  className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="w-full min-h-[80px] rounded-xl border border-border bg-secondary px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   value={form.scope}
                   onChange={(e) => setForm({ ...form, scope: e.target.value })}
                   placeholder="Detailed scope of work..."
@@ -112,7 +121,7 @@ export default function ProposalsPage() {
               <div className="space-y-2">
                 <Label>Assumptions (one per line)</Label>
                 <textarea
-                  className="w-full min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="w-full min-h-[60px] rounded-xl border border-border bg-secondary px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   value={form.assumptions}
                   onChange={(e) => setForm({ ...form, assumptions: e.target.value })}
                   placeholder="Market demand exists&#10;Resources available"
@@ -121,13 +130,17 @@ export default function ProposalsPage() {
               <div className="space-y-2">
                 <Label>Dependencies (one per line)</Label>
                 <textarea
-                  className="w-full min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="w-full min-h-[60px] rounded-xl border border-border bg-secondary px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   value={form.dependencies}
                   onChange={(e) => setForm({ ...form, dependencies: e.target.value })}
                   placeholder="Legal team&#10;Finance approval"
                 />
               </div>
-              <Button onClick={createProposal} disabled={creating} className="w-full">
+              <Button
+                onClick={createProposal}
+                disabled={creating}
+                className="w-full bg-foreground hover:bg-foreground/90 text-background rounded-xl h-12 cursor-pointer"
+              >
                 {creating ? 'Creating...' : 'Create Proposal'}
               </Button>
             </div>
@@ -135,47 +148,45 @@ export default function ProposalsPage() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Proposals</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Latest Version</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {proposals.map((p) => {
-                const latest = p.versions[0]
-                return (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{latest?.title || 'Untitled'}</TableCell>
-                    <TableCell>v{latest?.version || 1}</TableCell>
-                    <TableCell>{new Date(p.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Link href={`/proposals/${p.id}`}>
-                        <Button variant="outline" size="sm">View</Button>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-              {proposals.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
-                    No proposals yet
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        {proposals.map((p) => {
+          const latest = p.versions[0]
+          return (
+            <Link key={p.id} href={`/proposals/${p.id}`} className="block">
+              <Card className="bg-white border-border hover:border-primary/50 hover:shadow-md transition-all cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-semibold">{latest?.title || 'Untitled'}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-1">{latest?.summary || 'No summary'}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="text-xs text-muted-foreground">Version</div>
+                        <div className="font-medium">v{latest?.version || 1}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-muted-foreground">Created</div>
+                        <div className="font-medium">{new Date(p.createdAt).toLocaleDateString()}</div>
+                      </div>
+                      <svg className="h-5 w-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )
+        })}
+        {proposals.length === 0 && (
+          <Card className="bg-white border-border">
+            <CardContent className="p-12 text-center">
+              <div className="text-muted-foreground">No proposals yet. Create your first one.</div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   )
 }

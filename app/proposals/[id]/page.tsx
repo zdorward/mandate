@@ -55,7 +55,13 @@ export default function ProposalPage() {
     router.push(`/evaluations/${data.evaluation.id}`)
   }
 
-  if (loading) return <div>Loading...</div>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    )
+  }
   if (!proposal) return <div>Not found</div>
 
   const latest = proposal.versions[0]
@@ -63,53 +69,53 @@ export default function ProposalPage() {
   const dependencies = JSON.parse(latest.dependencies || '[]')
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-start">
+    <div className="space-y-8">
+      <div className="flex justify-between items-start pt-4">
         <div>
-          <h1 className="text-3xl font-bold">{latest.title}</h1>
-          <p className="text-muted-foreground mt-2">
-            Version {latest.version} | Created {new Date(latest.createdAt).toLocaleDateString()}
+          <h1 className="text-4xl font-bold tracking-tight">{latest.title}</h1>
+          <p className="text-muted-foreground mt-2 text-lg">
+            Version {latest.version} • Created {new Date(latest.createdAt).toLocaleDateString()}
           </p>
         </div>
-        <Button onClick={() => evaluate(latest.id)} disabled={evaluating} size="lg">
+        <Button onClick={() => evaluate(latest.id)} disabled={evaluating} size="lg" className="bg-foreground hover:bg-foreground/90 text-background cursor-pointer">
           {evaluating ? 'Evaluating...' : 'Evaluate Against Mandate'}
         </Button>
       </div>
 
       <Tabs defaultValue="current">
-        <TabsList>
-          <TabsTrigger value="current">Current Version</TabsTrigger>
-          <TabsTrigger value="history">Version History</TabsTrigger>
+        <TabsList className="bg-secondary">
+          <TabsTrigger value="current" className="cursor-pointer">Current Version</TabsTrigger>
+          <TabsTrigger value="history" className="cursor-pointer">Version History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="current" className="space-y-4">
-          <Card>
+          <Card className="bg-white border-border">
             <CardHeader>
               <CardTitle>Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>{latest.summary}</p>
+              <p className="text-muted-foreground">{latest.summary}</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-white border-border">
             <CardHeader>
               <CardTitle>Scope</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="whitespace-pre-wrap">{latest.scope}</p>
+              <p className="whitespace-pre-wrap text-muted-foreground">{latest.scope}</p>
             </CardContent>
           </Card>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <Card>
+            <Card className="bg-white border-border">
               <CardHeader>
                 <CardTitle>Assumptions</CardTitle>
                 <CardDescription>{assumptions.length} stated</CardDescription>
               </CardHeader>
               <CardContent>
                 {assumptions.length > 0 ? (
-                  <ul className="list-disc list-inside space-y-1">
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                     {assumptions.map((a: string, i: number) => (
                       <li key={i}>{a}</li>
                     ))}
@@ -120,14 +126,14 @@ export default function ProposalPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-white border-border">
               <CardHeader>
                 <CardTitle>Dependencies</CardTitle>
                 <CardDescription>{dependencies.length} identified</CardDescription>
               </CardHeader>
               <CardContent>
                 {dependencies.length > 0 ? (
-                  <ul className="list-disc list-inside space-y-1">
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                     {dependencies.map((d: string, i: number) => (
                       <li key={i}>{d}</li>
                     ))}
@@ -141,7 +147,7 @@ export default function ProposalPage() {
         </TabsContent>
 
         <TabsContent value="history">
-          <Card>
+          <Card className="bg-white border-border">
             <CardContent className="pt-6">
               <Table>
                 <TableHeader>
@@ -172,6 +178,7 @@ export default function ProposalPage() {
                           size="sm"
                           onClick={() => evaluate(v.id)}
                           disabled={evaluating}
+                          className="cursor-pointer"
                         >
                           Evaluate
                         </Button>

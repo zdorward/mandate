@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { computeChecksum } from '@/lib/utils/checksum'
-import { WeightsSchema, RiskToleranceSchema } from '@/lib/ai/schemas'
+import { OutcomesSchema } from '@/lib/ai/schemas'
 import { z } from 'zod'
 
 const CreateMandateVersionSchema = z.object({
   mandateId: z.string(),
-  weights: WeightsSchema,
-  riskTolerance: RiskToleranceSchema,
-  nonNegotiables: z.array(z.string()),
+  outcomes: OutcomesSchema,
 })
 
 export async function GET() {
@@ -32,7 +30,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.message }, { status: 400 })
   }
 
-  const { mandateId, weights, riskTolerance, nonNegotiables } = parsed.data
+  const { mandateId, outcomes } = parsed.data
 
   // Get next version number
   const lastVersion = await db.mandateVersion.findFirst({
@@ -42,17 +40,21 @@ export async function POST(request: NextRequest) {
 
   const nextVersion = (lastVersion?.version || 0) + 1
 
-  const versionData = { weights, riskTolerance, nonNegotiables }
+  const versionData = { outcomes }
+
+  // Deactivate current active version
+  await db.mandateVersion.updateMany({
+    where: { mandateId, isActive: true },
+    data: { isActive: false },
+  })
 
   const newVersion = await db.mandateVersion.create({
     data: {
       mandateId,
       version: nextVersion,
-      weights: JSON.stringify(weights),
-      riskTolerance,
-      nonNegotiables: JSON.stringify(nonNegotiables),
+      outcomes: JSON.stringify(outcomes),
       checksum: computeChecksum(versionData),
-      isActive: false,
+      isActive: true, // New version is immediately active
     },
   })
 
@@ -74,7 +76,6 @@ export async function PATCH(request: NextRequest) {
   const { versionId, activate } = body
 
   if (activate) {
-    // Deactivate all versions for this mandate first
     const version = await db.mandateVersion.findUnique({
       where: { id: versionId },
     })

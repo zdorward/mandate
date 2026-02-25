@@ -1,9 +1,5 @@
-import type { Weights, RiskTolerance } from './schemas'
-
 export interface PromptContext {
-  mandateWeights: Weights
-  riskTolerance: RiskTolerance
-  nonNegotiables: string[]
+  outcomes: string[]
   proposalTitle: string
   proposalSummary: string
   proposalScope: string
@@ -12,12 +8,14 @@ export interface PromptContext {
 }
 
 export function buildRiskDiscoveryPrompt(ctx: PromptContext): string {
+  const rankedOutcomes = ctx.outcomes
+    .map((o, i) => `${i + 1}. ${o}`)
+    .join('\n')
+
   return `You are a senior risk analyst. Analyze this business proposal for hidden risks.
 
-## MANDATE CONTEXT
-Priorities (weights): Growth=${ctx.mandateWeights.growth}, Cost=${ctx.mandateWeights.cost}, Risk=${ctx.mandateWeights.risk}, Brand=${ctx.mandateWeights.brand}
-Risk Tolerance: ${ctx.riskTolerance}
-Non-Negotiables: ${ctx.nonNegotiables.join(', ') || 'None specified'}
+## ORGANIZATIONAL PRIORITIES (in order of importance)
+${rankedOutcomes}
 
 ## PROPOSAL
 Title: ${ctx.proposalTitle}
@@ -27,7 +25,9 @@ Assumptions: ${ctx.proposalAssumptions.join('; ') || 'None stated'}
 Dependencies: ${ctx.proposalDependencies.join('; ') || 'None stated'}
 
 ## YOUR TASK
-Identify risks across 5 categories. Be concrete and plausible. No fluff.
+1. Identify risks across 5 categories. Be concrete and plausible.
+2. Consider how this proposal aligns with or threatens the ranked priorities above.
+3. Flag any conflicts with top priorities (1-3) as high severity.
 
 Return ONLY valid JSON matching this structure:
 {
@@ -37,14 +37,16 @@ Return ONLY valid JSON matching this structure:
   "metric_gaming_vectors": [...],
   "cross_functional_impacts": [...],
   "top_3_unseen_risks": ["...", "...", "..."],
-  "data_to_collect_next": ["...", "..."]
+  "data_to_collect_next": ["...", "..."],
+  "alignment_summary": "Brief assessment of how proposal aligns with top priorities"
 }
 
 Constraints:
 - Max 5 items per category
 - Each field max 200 chars
 - Be specific and actionable
-- Focus on what could go wrong that isn't obvious`
+- Focus on what could go wrong that isn't obvious
+- Higher severity for risks that threaten top-ranked priorities`
 }
 
-export const RISK_DISCOVERY_PROMPT_VERSION = 1
+export const RISK_DISCOVERY_PROMPT_VERSION = 2

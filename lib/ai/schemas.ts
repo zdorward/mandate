@@ -53,3 +53,6 @@ export type Weights = z.infer<typeof WeightsSchema>
 
 export const RiskToleranceSchema = z.enum(['CONSERVATIVE', 'MODERATE', 'AGGRESSIVE'])
 export type RiskTolerance = z.infer<typeof RiskToleranceSchema>
+
+export const OutcomesSchema = z.array(z.string().min(1).max(200)).min(1).max(10)
+export type Outcomes = z.infer<typeof OutcomesSchema>

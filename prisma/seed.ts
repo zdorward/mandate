@@ -40,17 +40,18 @@ async function main() {
     },
   })
 
-  // Create Proposals (keep the same)
+  // Create Proposals aligned with mandate outcomes
   const proposal1 = await prisma.proposal.create({ data: {} })
   const p1v1Data = {
-    title: 'APAC Market Expansion',
-    summary: 'Expand operations to Singapore and Japan markets with phased rollout over 6 months.',
+    title: 'Premium Enterprise Tier Launch',
+    summary: 'Launch a premium enterprise tier priced at 3x current pricing, targeting Fortune 500 companies. Projected to drive 25% revenue increase with minimal additional operational cost.',
     assumptions: [
-      'Local partners available for distribution',
-      'Product localization can be completed in 3 months',
+      'Enterprise customers will pay premium for dedicated support and SLAs',
+      'Existing infrastructure can handle enterprise workloads',
+      'Sales team can close 10 enterprise deals in Q1',
     ],
-    scope: 'Phase 1: Singapore (Month 1-3), Phase 2: Japan (Month 4-6).',
-    dependencies: ['Legal team for contracts', 'Product team for localization'],
+    scope: 'Month 1: Product packaging and pricing. Month 2: Sales enablement and marketing. Month 3-6: Enterprise sales push.',
+    dependencies: ['Product team for enterprise features', 'Legal for enterprise contracts', 'Support team for SLA commitments'],
   }
 
   await prisma.proposalVersion.create({
@@ -68,11 +69,15 @@ async function main() {
 
   const proposal2 = await prisma.proposal.create({ data: {} })
   const p2v1Data = {
-    title: 'Operational Efficiency Initiative',
-    summary: 'Reduce operational costs by 20% through process automation.',
-    assumptions: ['Automation tools can replace 30% of manual processes'],
-    scope: 'Q1: Process audit, Q2: Automation implementation.',
-    dependencies: ['IT for automation tools'],
+    title: 'APAC Market Expansion',
+    summary: 'Expand into Singapore and Japan markets to capture $50M addressable market. Partner-led model keeps operational costs flat while projecting 15% revenue growth contribution.',
+    assumptions: [
+      'Local distribution partners available in both markets',
+      'Product localization achievable within existing engineering budget',
+      'Customer satisfaction standards can be maintained via partner training',
+    ],
+    scope: 'Phase 1: Singapore launch (Month 1-3). Phase 2: Japan launch (Month 4-6). Partner support model maintains 90%+ CSAT.',
+    dependencies: ['Legal team for partner contracts', 'Product team for localization', 'Customer success for partner training'],
   }
 
   await prisma.proposalVersion.create({
@@ -90,11 +95,15 @@ async function main() {
 
   const proposal3 = await prisma.proposal.create({ data: {} })
   const p3v1Data = {
-    title: 'Innovation Lab Setup',
-    summary: 'Create an innovation lab to explore emerging technologies.',
-    assumptions: [],
-    scope: 'TBD',
-    dependencies: [],
+    title: 'Customer Success Platform Investment',
+    summary: 'Build proactive customer health monitoring to improve retention and drive CSAT from 88% to 95%. Reduces churn-related revenue loss by $2M annually.',
+    assumptions: [
+      'Churn is primarily driven by lack of proactive engagement',
+      'Health scoring model can predict at-risk accounts 30 days early',
+      'Platform can be built with existing team (no new headcount)',
+    ],
+    scope: 'Q1: Health scoring MVP. Q2: Automated intervention workflows. Ongoing: Measure impact on CSAT and retention.',
+    dependencies: ['Data team for health scoring model', 'Engineering for platform build', 'Customer success for workflow design'],
   }
 
   await prisma.proposalVersion.create({

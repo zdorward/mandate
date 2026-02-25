@@ -22,12 +22,13 @@ async function main() {
 
   // Create MandateVersion with task and outcomes
   const mandateV1Data = {
-    task: 'Drive aggressive growth in Q1 2026 while maintaining operational discipline and customer trust.',
+    task: 'Reduce account takeover (ATO) fraud losses by 60% in Q1 2026 without increasing false positive rate above 2% or degrading legitimate user login experience.',
     outcomes: [
-      'Increase revenue growth by 20%',
-      'Expand into new markets',
-      'Maintain customer satisfaction above 90%',
-      'Keep operational costs flat',
+      'Reduce ATO fraud losses from $120K/month to under $50K/month',
+      'Block 95%+ of credential stuffing attempts at login',
+      'Keep false positive rate under 2% (legitimate users incorrectly blocked)',
+      'Maintain login success rate above 98% for legitimate users',
+      'Ship new device fingerprinting system by Feb 15',
     ],
   }
 
@@ -42,18 +43,18 @@ async function main() {
     },
   })
 
-  // Create Proposals aligned with mandate outcomes
+  // Create Proposals aligned with fraud prevention mandate
   const proposal1 = await prisma.proposal.create({ data: {} })
   const p1v1Data = {
-    title: 'Premium Enterprise Tier Launch',
-    summary: 'Launch a premium enterprise tier priced at 3x current pricing, targeting Fortune 500 companies. Projected to drive 25% revenue increase with minimal additional operational cost.',
+    title: 'Device Fingerprinting Integration',
+    summary: 'Integrate FingerprintJS Pro to create persistent device identifiers across sessions. Expected to block 80% of credential stuffing by identifying known bad devices before login attempt completes.',
     assumptions: [
-      'Enterprise customers will pay premium for dedicated support and SLAs',
-      'Existing infrastructure can handle enterprise workloads',
-      'Sales team can close 10 enterprise deals in Q1',
+      'FingerprintJS Pro API latency stays under 100ms p99',
+      'Device fingerprint stability is 95%+ across browser updates',
+      'We can build the integration with 2 engineers in 3 weeks',
     ],
-    scope: 'Month 1: Product packaging and pricing. Month 2: Sales enablement and marketing. Month 3-6: Enterprise sales push.',
-    dependencies: ['Product team for enterprise features', 'Legal for enterprise contracts', 'Support team for SLA commitments'],
+    scope: 'Week 1-2: SDK integration and device ID storage. Week 3: Risk scoring integration. Week 4: Shadow mode testing. Week 5: Gradual rollout.',
+    dependencies: ['Platform team for SDK integration', 'Data team for fingerprint storage', 'Security review for PII implications'],
   }
 
   await prisma.proposalVersion.create({
@@ -71,15 +72,15 @@ async function main() {
 
   const proposal2 = await prisma.proposal.create({ data: {} })
   const p2v1Data = {
-    title: 'APAC Market Expansion',
-    summary: 'Expand into Singapore and Japan markets to capture $50M addressable market. Partner-led model keeps operational costs flat while projecting 15% revenue growth contribution.',
+    title: 'Adaptive MFA Step-Up',
+    summary: 'Implement risk-based MFA that only triggers step-up authentication for suspicious logins. Reduces friction for 95% of legitimate users while adding a hard block for high-risk attempts.',
     assumptions: [
-      'Local distribution partners available in both markets',
-      'Product localization achievable within existing engineering budget',
-      'Customer satisfaction standards can be maintained via partner training',
+      'Risk model can achieve 90% precision on high-risk classification',
+      'SMS OTP delivery rate stays above 98%',
+      'Users will tolerate step-up if it feels justified (new device, unusual location)',
     ],
-    scope: 'Phase 1: Singapore launch (Month 1-3). Phase 2: Japan launch (Month 4-6). Partner support model maintains 90%+ CSAT.',
-    dependencies: ['Legal team for partner contracts', 'Product team for localization', 'Customer success for partner training'],
+    scope: 'Phase 1: Risk scoring model (2 weeks). Phase 2: Step-up flow UI/UX (2 weeks). Phase 3: Gradual rollout with 1%/10%/50%/100% ramp.',
+    dependencies: ['ML team for risk model', 'Mobile team for push notification fallback', 'Twilio for SMS capacity'],
   }
 
   await prisma.proposalVersion.create({
@@ -97,15 +98,15 @@ async function main() {
 
   const proposal3 = await prisma.proposal.create({ data: {} })
   const p3v1Data = {
-    title: 'Customer Success Platform Investment',
-    summary: 'Build proactive customer health monitoring to improve retention and drive CSAT from 88% to 95%. Reduces churn-related revenue loss by $2M annually.',
+    title: 'Credential Stuffing Rate Limiter',
+    summary: 'Deploy IP-based and account-based rate limiting at the edge (Cloudflare) to block brute force attempts. Aggressive limits: 5 failed attempts per IP per minute, 10 per account per hour.',
     assumptions: [
-      'Churn is primarily driven by lack of proactive engagement',
-      'Health scoring model can predict at-risk accounts 30 days early',
-      'Platform can be built with existing team (no new headcount)',
+      'Cloudflare Workers can handle rate limit logic at edge without latency impact',
+      'Shared IP (corporate NAT) users represent less than 3% of logins',
+      'Attack patterns show 100+ attempts per minute from single IPs',
     ],
-    scope: 'Q1: Health scoring MVP. Q2: Automated intervention workflows. Ongoing: Measure impact on CSAT and retention.',
-    dependencies: ['Data team for health scoring model', 'Engineering for platform build', 'Customer success for workflow design'],
+    scope: 'Week 1: Cloudflare Worker implementation. Week 2: Shadow mode logging. Week 3: Production deployment with bypass for allowlisted IPs.',
+    dependencies: ['Infrastructure team for Cloudflare config', 'Support team for false positive escalation path'],
   }
 
   await prisma.proposalVersion.create({

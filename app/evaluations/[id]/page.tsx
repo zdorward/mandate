@@ -19,10 +19,7 @@ interface RiskItem {
 
 interface DecisionObject {
   summary: string
-  impact_estimate: { growth: string; cost: string; risk: string; brand: string }
-  tradeoff_score: number
-  conflicts: string[]
-  constraint_violations: string[]
+  outcomes: string[]
   unseen_risks: {
     implicit_assumptions: RiskItem[]
     second_order_effects: RiskItem[]
@@ -134,26 +131,6 @@ export default function EvaluationPage() {
           )}
         </div>
 
-        {/* Constraint Violations */}
-        {d.constraint_violations.length > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-            <div className="flex items-center gap-2 text-red-700 font-semibold mb-3">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              Constraint Violations
-            </div>
-            <ul className="space-y-2">
-              {d.constraint_violations.map((v, i) => (
-                <li key={i} className="text-red-600 text-sm flex items-start gap-2">
-                  <span className="text-red-500 mt-0.5">•</span>
-                  {v}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         {/* Summary Card */}
         <Card className="bg-white border-border">
           <CardHeader>
@@ -165,60 +142,49 @@ export default function EvaluationPage() {
           <CardContent className="space-y-6">
             <p className="text-muted-foreground leading-relaxed">{d.summary}</p>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">Confidence</span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="cursor-help">
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary rounded-full transition-all"
-                            style={{ width: `${d.confidence * 100}%` }}
-                          />
-                        </div>
-                        <span className="font-semibold text-lg">{(d.confidence * 100).toFixed(0)}%</span>
+            <div className="space-y-2">
+              <span className="text-sm text-muted-foreground">Confidence</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="cursor-help">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${d.confidence * 100}%` }}
+                        />
                       </div>
+                      <span className="font-semibold text-lg">{(d.confidence * 100).toFixed(0)}%</span>
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <ul className="text-sm space-y-1">
-                      {d.confidence_reasons.map((r, i) => <li key={i}>• {r}</li>)}
-                    </ul>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">Tradeoff Score</span>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-500 rounded-full"
-                      style={{ width: `${d.tradeoff_score * 100}%` }}
-                    />
                   </div>
-                  <span className="font-semibold text-lg">{(d.tradeoff_score * 100).toFixed(0)}%</span>
-                </div>
-              </div>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <ul className="text-sm space-y-1">
+                    {d.confidence_reasons.map((r, i) => <li key={i}>• {r}</li>)}
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </CardContent>
         </Card>
 
-        {/* Impact Estimate */}
+        {/* Outcomes (what this was evaluated against) */}
         <Card className="bg-white border-border">
           <CardHeader>
-            <CardTitle>Impact Estimate</CardTitle>
+            <CardTitle>Evaluated Against</CardTitle>
+            <CardDescription>These priorities were used to evaluate this proposal</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-4 gap-4">
-              {Object.entries(d.impact_estimate).map(([key, value]) => (
-                <div key={key} className="text-center p-5 bg-secondary rounded-xl border border-border">
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">{key}</div>
-                  <div className="font-semibold text-lg">{value}</div>
-                </div>
+            <ol className="space-y-2">
+              {d.outcomes.map((outcome, i) => (
+                <li key={i} className="flex items-center gap-3">
+                  <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-white text-xs font-bold">
+                    {i + 1}
+                  </span>
+                  <span className="text-sm">{outcome}</span>
+                </li>
               ))}
-            </div>
+            </ol>
           </CardContent>
         </Card>
 

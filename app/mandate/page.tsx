@@ -339,27 +339,30 @@ export default function MandatePage() {
                 return (
                   <div
                     key={v.id}
-                    className="flex items-center justify-between p-4 bg-secondary rounded-xl"
+                    className="p-4 bg-secondary rounded-xl space-y-2"
                   >
-                    <div>
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">v{v.version}</span>
                         {v.isActive && <Badge>Active</Badge>}
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {vOutcomes.length || '?'} outcomes • {new Date(v.createdAt).toLocaleDateString()}
-                      </div>
+                      {!v.isActive && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => restoreVersion(v.id)}
+                          className="cursor-pointer"
+                        >
+                          Restore
+                        </Button>
+                      )}
                     </div>
-                    {!v.isActive && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => restoreVersion(v.id)}
-                        className="cursor-pointer"
-                      >
-                        Restore
-                      </Button>
+                    {v.task && (
+                      <p className="text-sm text-foreground">{v.task}</p>
                     )}
+                    <div className="text-sm text-muted-foreground">
+                      {vOutcomes.length} priorities • {new Date(v.createdAt).toLocaleDateString()}
+                    </div>
                   </div>
                 )
               })}

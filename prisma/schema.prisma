@@ -21,6 +21,7 @@ model MandateVersion {
   weights        String?      // JSON string (deprecated, nullable for new versions)
   riskTolerance  String?      // CONSERVATIVE | MODERATE | AGGRESSIVE (deprecated)
   nonNegotiables String?      // JSON string array (deprecated)
+  task           String?      // Description of what you're trying to accomplish
   outcomes       String?      // JSON string array - ranked list of outcomes
   createdAt      DateTime     @default(now())
   checksum       String

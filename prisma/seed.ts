@@ -20,8 +20,9 @@ async function main() {
     },
   })
 
-  // Create MandateVersion with outcomes
+  // Create MandateVersion with task and outcomes
   const mandateV1Data = {
+    task: 'Drive aggressive growth in Q1 2026 while maintaining operational discipline and customer trust.',
     outcomes: [
       'Increase revenue growth by 20%',
       'Expand into new markets',
@@ -34,6 +35,7 @@ async function main() {
     data: {
       mandateId: mandate.id,
       version: 1,
+      task: mandateV1Data.task,
       outcomes: JSON.stringify(mandateV1Data.outcomes),
       checksum: computeChecksum(mandateV1Data),
       isActive: true,

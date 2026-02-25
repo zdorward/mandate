@@ -6,6 +6,7 @@ import { z } from 'zod'
 
 const CreateMandateVersionSchema = z.object({
   mandateId: z.string(),
+  task: z.string().max(500).optional(),
   outcomes: OutcomesSchema,
 })
 
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.message }, { status: 400 })
   }
 
-  const { mandateId, outcomes } = parsed.data
+  const { mandateId, task, outcomes } = parsed.data
 
   // Get next version number
   const lastVersion = await db.mandateVersion.findFirst({
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
 
   const nextVersion = (lastVersion?.version || 0) + 1
 
-  const versionData = { outcomes }
+  const versionData = { task, outcomes }
 
   // Deactivate current active version
   await db.mandateVersion.updateMany({
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
     data: {
       mandateId,
       version: nextVersion,
+      task: task || null,
       outcomes: JSON.stringify(outcomes),
       checksum: computeChecksum(versionData),
       isActive: true, // New version is immediately active

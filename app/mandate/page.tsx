@@ -30,6 +30,7 @@ import {
 interface MandateVersion {
   id: string
   version: number
+  task: string | null
   outcomes: string | null
   weights: string | null
   isActive: boolean
@@ -103,6 +104,8 @@ export default function MandatePage() {
   const [mandate, setMandate] = useState<Mandate | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [task, setTask] = useState('')
+  const [savedTask, setSavedTask] = useState('')
   const [outcomes, setOutcomes] = useState<string[]>([])
   const [savedOutcomes, setSavedOutcomes] = useState<string[]>([])
   const [newOutcome, setNewOutcome] = useState('')
@@ -128,10 +131,15 @@ export default function MandatePage() {
 
     if (m) {
       const activeVersion = m.versions.find((v: MandateVersion) => v.isActive)
-      if (activeVersion?.outcomes) {
-        const parsed = JSON.parse(activeVersion.outcomes)
-        setOutcomes(parsed)
-        setSavedOutcomes(parsed)
+      if (activeVersion) {
+        const taskValue = activeVersion.task || ''
+        setTask(taskValue)
+        setSavedTask(taskValue)
+        if (activeVersion.outcomes) {
+          const parsed = JSON.parse(activeVersion.outcomes)
+          setOutcomes(parsed)
+          setSavedOutcomes(parsed)
+        }
       }
     }
     setLoading(false)
@@ -146,9 +154,11 @@ export default function MandatePage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         mandateId: mandate.id,
+        task: task || undefined,
         outcomes,
       }),
     })
+    setSavedTask(task)
     setSavedOutcomes([...outcomes])
     await fetchMandate()
     setSaving(false)
@@ -184,7 +194,7 @@ export default function MandatePage() {
     setOutcomes(outcomes.filter((_, i) => i !== index))
   }
 
-  const hasChanges = JSON.stringify(outcomes) !== JSON.stringify(savedOutcomes)
+  const hasChanges = task !== savedTask || JSON.stringify(outcomes) !== JSON.stringify(savedOutcomes)
 
   if (loading) {
     return (
@@ -202,6 +212,22 @@ export default function MandatePage() {
           Define the outcomes you want. AI will evaluate proposals against these priorities.
         </p>
       </div>
+
+      <Card className="bg-white border-border">
+        <CardHeader>
+          <CardTitle className="text-lg font-medium text-muted-foreground">
+            YOUR TASK
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <textarea
+            className="w-full min-h-[100px] px-4 py-3 bg-secondary border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+            placeholder="What are you trying to accomplish? (e.g., Launch Q1 growth initiatives while maintaining profitability)"
+            value={task}
+            onChange={(e) => setTask(e.target.value)}
+          />
+        </CardContent>
+      </Card>
 
       <Card className="bg-white border-border">
         <CardHeader>

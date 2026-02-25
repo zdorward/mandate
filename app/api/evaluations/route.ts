@@ -3,13 +3,13 @@ import { db } from '@/lib/db'
 import { evaluateProposal } from '@/lib/engine/pipeline'
 import { z } from 'zod'
 
-const EvaluateSchema = z.object({
+const CreateEvaluationSchema = z.object({
   proposalVersionId: z.string(),
 })
 
 export async function POST(request: NextRequest) {
   const body = await request.json()
-  const parsed = EvaluateSchema.safeParse(body)
+  const parsed = CreateEvaluationSchema.safeParse(body)
 
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.message }, { status: 400 })
@@ -32,16 +32,24 @@ export async function POST(request: NextRequest) {
   })
 
   if (!proposalVersion) {
-    return NextResponse.json({ error: 'Proposal version not found' }, { status: 404 })
+    return NextResponse.json({ error: 'Proposal not found' }, { status: 404 })
+  }
+
+  // Parse mandate outcomes (handle both old and new format)
+  let outcomes: string[] = []
+  if (mandateVersion.outcomes) {
+    outcomes = JSON.parse(mandateVersion.outcomes)
+  } else if (mandateVersion.weights) {
+    // Backwards compatibility: convert old weights to outcomes
+    const weights = JSON.parse(mandateVersion.weights)
+    outcomes = Object.entries(weights)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
+      .map(([key]) => `Prioritize ${key}`)
   }
 
   // Run evaluation
   const { decisionObject, trace } = await evaluateProposal({
-    mandate: {
-      weights: JSON.parse(mandateVersion.weights),
-      riskTolerance: mandateVersion.riskTolerance as 'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE',
-      nonNegotiables: JSON.parse(mandateVersion.nonNegotiables),
-    },
+    mandate: { outcomes },
     proposal: {
       title: proposalVersion.title,
       summary: proposalVersion.summary,
@@ -51,35 +59,19 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  // Create inputs snapshot
-  const inputsSnapshot = {
-    mandate: {
-      id: mandateVersion.id,
-      version: mandateVersion.version,
-      weights: JSON.parse(mandateVersion.weights),
-      riskTolerance: mandateVersion.riskTolerance,
-      nonNegotiables: JSON.parse(mandateVersion.nonNegotiables),
-      checksum: mandateVersion.checksum,
-    },
-    proposal: {
-      id: proposalVersion.id,
-      version: proposalVersion.version,
-      title: proposalVersion.title,
-      summary: proposalVersion.summary,
-      scope: proposalVersion.scope,
-      assumptions: JSON.parse(proposalVersion.assumptions),
-      dependencies: JSON.parse(proposalVersion.dependencies),
-      checksum: proposalVersion.checksum,
-    },
-  }
-
   // Save evaluation
   const evaluation = await db.evaluation.create({
     data: {
       mandateVersionId: mandateVersion.id,
       proposalVersionId,
       decisionObject: JSON.stringify(decisionObject),
-      inputsSnapshot: JSON.stringify(inputsSnapshot),
+      inputsSnapshot: JSON.stringify({
+        mandate: { outcomes },
+        proposal: {
+          title: proposalVersion.title,
+          summary: proposalVersion.summary,
+        },
+      }),
       modelTrace: JSON.stringify(trace),
     },
   })

@@ -1,15 +1,10 @@
 import { buildFeatures, type ProposalInput } from './featureBuilder'
-import { scoreProposal, type MandateInput } from './deterministicScorer'
-import { applyEscalation } from './escalationPolicy'
-import { computeConfidence } from './confidenceComputation'
 import { discoverRisks, type ModelTrace } from '@/lib/ai/riskDiscovery'
-import type { DecisionObject, Weights, RiskTolerance } from '@/lib/ai/schemas'
+import type { RiskDiscoveryOutput } from '@/lib/ai/schemas'
 
 export interface EvaluationInput {
   mandate: {
-    weights: Weights
-    riskTolerance: RiskTolerance
-    nonNegotiables: string[]
+    outcomes: string[]
   }
   proposal: {
     title: string
@@ -18,6 +13,17 @@ export interface EvaluationInput {
     assumptions: string[]
     dependencies: string[]
   }
+}
+
+export interface DecisionObject {
+  summary: string
+  outcomes: string[]
+  unseen_risks: RiskDiscoveryOutput
+  confidence: number
+  confidence_reasons: string[]
+  required_next_evidence: string[]
+  recommendation: 'APPROVE' | 'REVISE' | 'ESCALATE'
+  human_required: boolean
 }
 
 export interface EvaluationOutput {
@@ -31,14 +37,9 @@ export async function evaluateProposal(input: EvaluationInput): Promise<Evaluati
   // 1. Build features (deterministic)
   const features = buildFeatures(proposal)
 
-  // 2. Deterministic scoring
-  const scores = scoreProposal(mandate, proposal, features)
-
-  // 3. Risk discovery (LLM or mock)
+  // 2. Risk discovery (LLM or mock)
   const { risks, trace } = await discoverRisks({
-    mandateWeights: mandate.weights,
-    riskTolerance: mandate.riskTolerance,
-    nonNegotiables: mandate.nonNegotiables,
+    outcomes: mandate.outcomes,
     proposalTitle: proposal.title,
     proposalSummary: proposal.summary,
     proposalScope: proposal.scope,
@@ -46,63 +47,93 @@ export async function evaluateProposal(input: EvaluationInput): Promise<Evaluati
     proposalDependencies: proposal.dependencies,
   })
 
-  // 4. Confidence computation (deterministic)
-  const { confidence, reasons: confidenceReasons } = computeConfidence(
-    features,
-    scores,
-    risks,
-    trace
-  )
+  // 3. Compute confidence based on proposal quality
+  const { confidence, reasons: confidenceReasons } = computeSimpleConfidence(features, trace)
 
-  // 5. Escalation policy (deterministic)
-  const escalation = applyEscalation(
-    mandate.riskTolerance,
-    scores,
-    risks,
-    confidence
-  )
+  // 4. Determine recommendation based on risks
+  const { recommendation, humanRequired } = determineRecommendation(risks, confidence)
 
-  // 6. Assemble decision object
-  const summary = generateSummary(proposal, scores, escalation.recommendation)
+  // 5. Assemble decision object
+  const summary = generateSummary(proposal.title, recommendation, risks)
   const requiredEvidence = risks.data_to_collect_next || []
 
   const decisionObject: DecisionObject = {
     summary,
-    impact_estimate: scores.impactEstimate,
-    tradeoff_score: scores.tradeoffScore,
-    conflicts: scores.conflicts,
-    constraint_violations: scores.constraintViolations,
+    outcomes: mandate.outcomes,
     unseen_risks: risks,
     confidence,
     confidence_reasons: confidenceReasons,
     required_next_evidence: requiredEvidence,
-    recommendation: escalation.recommendation,
-    human_required: escalation.humanRequired,
+    recommendation,
+    human_required: humanRequired,
   }
 
   return { decisionObject, trace }
 }
 
+function computeSimpleConfidence(
+  features: ReturnType<typeof buildFeatures>,
+  trace: ModelTrace
+): { confidence: number; reasons: string[] } {
+  let confidence = 0.8
+  const reasons: string[] = []
+
+  if (features.missingFieldsCount > 0) {
+    confidence -= features.missingFieldsCount * 0.1
+    reasons.push(`Missing ${features.missingFieldsCount} proposal field(s)`)
+  }
+
+  if (features.assumptionCount === 0) {
+    confidence -= 0.1
+    reasons.push('No assumptions stated')
+  }
+
+  if (trace.failures.length > 0) {
+    confidence -= 0.2
+    reasons.push('AI analysis had failures')
+  }
+
+  if (reasons.length === 0) {
+    reasons.push('Proposal well-formed')
+  }
+
+  return { confidence: Math.max(0.1, confidence), reasons }
+}
+
+function determineRecommendation(
+  risks: RiskDiscoveryOutput,
+  confidence: number
+): { recommendation: 'APPROVE' | 'REVISE' | 'ESCALATE'; humanRequired: boolean } {
+  const hasHighSeverityRisk = [
+    ...(risks.tail_risks || []),
+    ...(risks.implicit_assumptions || []),
+    ...(risks.second_order_effects || []),
+  ].some(r => r.severity === 'high')
+
+  if (confidence < 0.4) {
+    return { recommendation: 'ESCALATE', humanRequired: true }
+  }
+
+  if (hasHighSeverityRisk) {
+    return { recommendation: 'ESCALATE', humanRequired: true }
+  }
+
+  if (confidence >= 0.7) {
+    return { recommendation: 'APPROVE', humanRequired: false }
+  }
+
+  return { recommendation: 'REVISE', humanRequired: true }
+}
+
 function generateSummary(
-  proposal: ProposalInput,
-  scores: ReturnType<typeof scoreProposal>,
-  recommendation: string
+  title: string,
+  recommendation: string,
+  risks: RiskDiscoveryOutput
 ): string {
   const action = recommendation === 'APPROVE' ? 'Proceed with' :
                  recommendation === 'REVISE' ? 'Revise' : 'Escalate'
 
-  let summary = `${action}: ${proposal.title}. `
+  const riskCount = (risks.top_3_unseen_risks || []).length
 
-  if (scores.constraintViolations.length > 0) {
-    summary += `${scores.constraintViolations.length} constraint violation(s). `
-  }
-
-  if (scores.conflicts.length > 0) {
-    summary += `${scores.conflicts.length} conflict(s) detected. `
-  }
-
-  summary += `Tradeoff score: ${(scores.tradeoffScore * 100).toFixed(0)}%.`
-
-  // Trim to 240 chars
-  return summary.slice(0, 240)
+  return `${action}: ${title}. ${riskCount} key risks identified.`.slice(0, 240)
 }

@@ -2294,4 +2294,1625 @@ git commit -m "feat: add navigation and home page"
 
 ---
 
-I'll continue with Tasks 20-26 in the next section. Would you like me to proceed with the rest of the implementation plan?
+## Phase 5: UI Pages (continued)
+
+### Task 20: Mandate Page
+
+**Files:**
+- Create: `app/mandate/page.tsx`
+
+**Step 1: Create mandate page**
+
+Create `app/mandate/page.tsx`:
+
+```typescript
+'use client'
+
+import { useEffect, useState } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+
+interface MandateVersion {
+  id: string
+  version: number
+  weights: string
+  riskTolerance: string
+  nonNegotiables: string
+  isActive: boolean
+  createdAt: string
+}
+
+interface Mandate {
+  id: string
+  name: string
+  versions: MandateVersion[]
+}
+
+export default function MandatePage() {
+  const [mandates, setMandates] = useState<Mandate[]>([])
+  const [loading, setLoading] = useState(true)
+  const [creating, setCreating] = useState(false)
+  const [form, setForm] = useState({
+    growth: 0.4,
+    cost: 0.2,
+    risk: 0.3,
+    brand: 0.1,
+    riskTolerance: 'MODERATE',
+    nonNegotiables: '',
+  })
+
+  useEffect(() => {
+    fetchMandates()
+  }, [])
+
+  async function fetchMandates() {
+    const res = await fetch('/api/mandate')
+    const data = await res.json()
+    setMandates(data)
+    setLoading(false)
+  }
+
+  async function createVersion() {
+    const mandate = mandates[0]
+    if (!mandate) return
+
+    setCreating(true)
+    await fetch('/api/mandate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mandateId: mandate.id,
+        weights: {
+          growth: form.growth,
+          cost: form.cost,
+          risk: form.risk,
+          brand: form.brand,
+        },
+        riskTolerance: form.riskTolerance,
+        nonNegotiables: form.nonNegotiables.split('\n').filter(Boolean),
+      }),
+    })
+    await fetchMandates()
+    setCreating(false)
+  }
+
+  async function activateVersion(versionId: string) {
+    await fetch('/api/mandate', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ versionId, activate: true }),
+    })
+    await fetchMandates()
+  }
+
+  if (loading) return <div>Loading...</div>
+
+  const mandate = mandates[0]
+  const activeVersion = mandate?.versions.find(v => v.isActive)
+  const activeWeights = activeVersion ? JSON.parse(activeVersion.weights) : null
+  const activeNonNeg = activeVersion ? JSON.parse(activeVersion.nonNegotiables) : []
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Mandate</h1>
+        <p className="text-muted-foreground mt-2">
+          Define organizational priorities and constraints
+        </p>
+      </div>
+
+      {activeVersion && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Active Mandate
+              <Badge>v{activeVersion.version}</Badge>
+            </CardTitle>
+            <CardDescription>
+              Risk Tolerance: {activeVersion.riskTolerance}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-sm text-muted-foreground">Weights</Label>
+              <div className="grid grid-cols-4 gap-4 mt-2">
+                {activeWeights && Object.entries(activeWeights).map(([key, value]) => (
+                  <div key={key} className="space-y-1">
+                    <div className="text-sm font-medium capitalize">{key}</div>
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary"
+                        style={{ width: `${(value as number) * 100}%` }}
+                      />
+                    </div>
+                    <div className="text-xs text-muted-foreground">{((value as number) * 100).toFixed(0)}%</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm text-muted-foreground">Non-Negotiables</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {activeNonNeg.map((item: string, i: number) => (
+                  <Badge key={i} variant="destructive">{item}</Badge>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Create New Version</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-4 gap-4">
+            {['growth', 'cost', 'risk', 'brand'].map((key) => (
+              <div key={key} className="space-y-2">
+                <Label className="capitalize">{key}</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={form[key as keyof typeof form]}
+                  onChange={(e) => setForm({ ...form, [key]: parseFloat(e.target.value) })}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <Label>Risk Tolerance</Label>
+            <Select value={form.riskTolerance} onValueChange={(v) => setForm({ ...form, riskTolerance: v })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CONSERVATIVE">Conservative</SelectItem>
+                <SelectItem value="MODERATE">Moderate</SelectItem>
+                <SelectItem value="AGGRESSIVE">Aggressive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Non-Negotiables (one per line)</Label>
+            <textarea
+              className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={form.nonNegotiables}
+              onChange={(e) => setForm({ ...form, nonNegotiables: e.target.value })}
+              placeholder="No layoffs&#10;Budget must not exceed $500k"
+            />
+          </div>
+          <Button onClick={createVersion} disabled={creating}>
+            {creating ? 'Creating...' : 'Create Version'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Version History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Version</TableHead>
+                <TableHead>Risk Tolerance</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {mandate?.versions.map((v) => (
+                <TableRow key={v.id}>
+                  <TableCell>v{v.version}</TableCell>
+                  <TableCell>{v.riskTolerance}</TableCell>
+                  <TableCell>{new Date(v.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    {v.isActive ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
+                  </TableCell>
+                  <TableCell>
+                    {!v.isActive && (
+                      <Button variant="outline" size="sm" onClick={() => activateVersion(v.id)}>
+                        Activate
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+```
+
+**Step 2: Commit**
+
+```bash
+git add app/mandate/page.tsx
+git commit -m "feat: add mandate page with version management"
+```
+
+---
+
+### Task 21: Proposals List Page
+
+**Files:**
+- Create: `app/proposals/page.tsx`
+
+**Step 1: Create proposals page**
+
+Create `app/proposals/page.tsx`:
+
+```typescript
+'use client'
+
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+
+interface Proposal {
+  id: string
+  createdAt: string
+  versions: Array<{
+    id: string
+    version: number
+    title: string
+    summary: string
+  }>
+}
+
+export default function ProposalsPage() {
+  const [proposals, setProposals] = useState<Proposal[]>([])
+  const [loading, setLoading] = useState(true)
+  const [open, setOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [form, setForm] = useState({
+    title: '',
+    summary: '',
+    scope: '',
+    assumptions: '',
+    dependencies: '',
+  })
+
+  useEffect(() => {
+    fetchProposals()
+  }, [])
+
+  async function fetchProposals() {
+    const res = await fetch('/api/proposals')
+    const data = await res.json()
+    setProposals(data)
+    setLoading(false)
+  }
+
+  async function createProposal() {
+    setCreating(true)
+    await fetch('/api/proposals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: form.title,
+        summary: form.summary,
+        scope: form.scope,
+        assumptions: form.assumptions.split('\n').filter(Boolean),
+        dependencies: form.dependencies.split('\n').filter(Boolean),
+      }),
+    })
+    setForm({ title: '', summary: '', scope: '', assumptions: '', dependencies: '' })
+    setOpen(false)
+    await fetchProposals()
+    setCreating(false)
+  }
+
+  if (loading) return <div>Loading...</div>
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Proposals</h1>
+          <p className="text-muted-foreground mt-2">
+            Submit and evaluate business proposals
+          </p>
+        </div>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button>New Proposal</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Create Proposal</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Title</Label>
+                <Input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="APAC Market Expansion"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Summary</Label>
+                <textarea
+                  className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={form.summary}
+                  onChange={(e) => setForm({ ...form, summary: e.target.value })}
+                  placeholder="Brief description of the proposal..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Scope</Label>
+                <textarea
+                  className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={form.scope}
+                  onChange={(e) => setForm({ ...form, scope: e.target.value })}
+                  placeholder="Detailed scope of work..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Assumptions (one per line)</Label>
+                <textarea
+                  className="w-full min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={form.assumptions}
+                  onChange={(e) => setForm({ ...form, assumptions: e.target.value })}
+                  placeholder="Market demand exists&#10;Resources available"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Dependencies (one per line)</Label>
+                <textarea
+                  className="w-full min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={form.dependencies}
+                  onChange={(e) => setForm({ ...form, dependencies: e.target.value })}
+                  placeholder="Legal team&#10;Finance approval"
+                />
+              </div>
+              <Button onClick={createProposal} disabled={creating} className="w-full">
+                {creating ? 'Creating...' : 'Create Proposal'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>All Proposals</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Latest Version</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {proposals.map((p) => {
+                const latest = p.versions[0]
+                return (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{latest?.title || 'Untitled'}</TableCell>
+                    <TableCell>v{latest?.version || 1}</TableCell>
+                    <TableCell>{new Date(p.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Link href={`/proposals/${p.id}`}>
+                        <Button variant="outline" size="sm">View</Button>
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+              {proposals.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    No proposals yet
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+```
+
+**Step 2: Commit**
+
+```bash
+git add app/proposals/page.tsx
+git commit -m "feat: add proposals list page"
+```
+
+---
+
+### Task 22: Proposal Detail Page
+
+**Files:**
+- Create: `app/proposals/[id]/page.tsx`
+
+**Step 1: Create proposal detail page**
+
+Create `app/proposals/[id]/page.tsx`:
+
+```typescript
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+
+interface ProposalVersion {
+  id: string
+  version: number
+  title: string
+  summary: string
+  scope: string
+  assumptions: string
+  dependencies: string
+  createdAt: string
+  evaluations: Array<{ id: string }>
+}
+
+interface Proposal {
+  id: string
+  versions: ProposalVersion[]
+}
+
+export default function ProposalPage() {
+  const params = useParams()
+  const router = useRouter()
+  const [proposal, setProposal] = useState<Proposal | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [evaluating, setEvaluating] = useState(false)
+
+  useEffect(() => {
+    fetchProposal()
+  }, [params.id])
+
+  async function fetchProposal() {
+    const res = await fetch(`/api/proposals/${params.id}`)
+    const data = await res.json()
+    setProposal(data)
+    setLoading(false)
+  }
+
+  async function evaluate(versionId: string) {
+    setEvaluating(true)
+    const res = await fetch('/api/evaluations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ proposalVersionId: versionId }),
+    })
+    const data = await res.json()
+    setEvaluating(false)
+    router.push(`/evaluations/${data.evaluation.id}`)
+  }
+
+  if (loading) return <div>Loading...</div>
+  if (!proposal) return <div>Not found</div>
+
+  const latest = proposal.versions[0]
+  const assumptions = JSON.parse(latest.assumptions || '[]')
+  const dependencies = JSON.parse(latest.dependencies || '[]')
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold">{latest.title}</h1>
+          <p className="text-muted-foreground mt-2">
+            Version {latest.version} | Created {new Date(latest.createdAt).toLocaleDateString()}
+          </p>
+        </div>
+        <Button onClick={() => evaluate(latest.id)} disabled={evaluating} size="lg">
+          {evaluating ? 'Evaluating...' : 'Evaluate Against Mandate'}
+        </Button>
+      </div>
+
+      <Tabs defaultValue="current">
+        <TabsList>
+          <TabsTrigger value="current">Current Version</TabsTrigger>
+          <TabsTrigger value="history">Version History</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="current" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>{latest.summary}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scope</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="whitespace-pre-wrap">{latest.scope}</p>
+            </CardContent>
+          </Card>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Assumptions</CardTitle>
+                <CardDescription>{assumptions.length} stated</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {assumptions.length > 0 ? (
+                  <ul className="list-disc list-inside space-y-1">
+                    {assumptions.map((a: string, i: number) => (
+                      <li key={i}>{a}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">None stated</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Dependencies</CardTitle>
+                <CardDescription>{dependencies.length} identified</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {dependencies.length > 0 ? (
+                  <ul className="list-disc list-inside space-y-1">
+                    {dependencies.map((d: string, i: number) => (
+                      <li key={i}>{d}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">None identified</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <Card>
+            <CardContent className="pt-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Version</TableHead>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Evaluations</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {proposal.versions.map((v) => (
+                    <TableRow key={v.id}>
+                      <TableCell>v{v.version}</TableCell>
+                      <TableCell>{v.title}</TableCell>
+                      <TableCell>{new Date(v.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        {v.evaluations.length > 0 ? (
+                          <Badge variant="secondary">{v.evaluations.length}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">None</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => evaluate(v.id)}
+                          disabled={evaluating}
+                        >
+                          Evaluate
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+```
+
+**Step 2: Commit**
+
+```bash
+git add app/proposals/\[id\]/page.tsx
+git commit -m "feat: add proposal detail page with evaluation trigger"
+```
+
+---
+
+### Task 23: Evaluation Page (Executive View)
+
+**Files:**
+- Create: `app/evaluations/[id]/page.tsx`
+
+**Step 1: Create evaluation page**
+
+Create `app/evaluations/[id]/page.tsx`:
+
+```typescript
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+
+interface RiskItem {
+  risk: string
+  severity: 'low' | 'med' | 'high'
+  evidence_needed: string
+}
+
+interface DecisionObject {
+  summary: string
+  impact_estimate: { growth: string; cost: string; risk: string; brand: string }
+  tradeoff_score: number
+  conflicts: string[]
+  constraint_violations: string[]
+  unseen_risks: {
+    implicit_assumptions: RiskItem[]
+    second_order_effects: RiskItem[]
+    tail_risks: RiskItem[]
+    metric_gaming_vectors: RiskItem[]
+    cross_functional_impacts: RiskItem[]
+    top_3_unseen_risks: string[]
+    data_to_collect_next: string[]
+  }
+  confidence: number
+  confidence_reasons: string[]
+  required_next_evidence: string[]
+  recommendation: 'APPROVE' | 'REVISE' | 'ESCALATE'
+  human_required: boolean
+}
+
+interface Override {
+  id: string
+  actor: string
+  decision: string
+  rationale: string
+  createdAt: string
+}
+
+interface AuditLog {
+  id: string
+  actor: string
+  action: string
+  rationale?: string
+  createdAt: string
+}
+
+interface Evaluation {
+  id: string
+  decisionObject: DecisionObject
+  proposalVersion: { title: string; version: number }
+  mandateVersion: { version: number }
+  overrides: Override[]
+  auditLogs: AuditLog[]
+  createdAt: string
+}
+
+export default function EvaluationPage() {
+  const params = useParams()
+  const [evaluation, setEvaluation] = useState<Evaluation | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [overrideForm, setOverrideForm] = useState({ decision: '', rationale: '', actor: '' })
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    fetchEvaluation()
+  }, [params.id])
+
+  async function fetchEvaluation() {
+    const res = await fetch(`/api/evaluations/${params.id}`)
+    const data = await res.json()
+    setEvaluation(data)
+    setLoading(false)
+  }
+
+  async function submitOverride() {
+    if (!overrideForm.decision || !overrideForm.rationale || !overrideForm.actor) return
+    setSubmitting(true)
+    await fetch('/api/override', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        evaluationId: params.id,
+        ...overrideForm,
+      }),
+    })
+    setOverrideForm({ decision: '', rationale: '', actor: '' })
+    await fetchEvaluation()
+    setSubmitting(false)
+  }
+
+  if (loading) return <div>Loading...</div>
+  if (!evaluation) return <div>Not found</div>
+
+  const d = evaluation.decisionObject
+
+  const recColor = d.recommendation === 'APPROVE' ? 'bg-green-500' :
+                   d.recommendation === 'ESCALATE' ? 'bg-red-500' : 'bg-yellow-500'
+
+  return (
+    <TooltipProvider>
+      <div className="space-y-6">
+        {/* Recommendation Banner */}
+        <div className={`${recColor} text-white p-6 rounded-lg`}>
+          <div className="text-4xl font-bold">{d.recommendation}</div>
+          {d.human_required && (
+            <div className="mt-2 text-sm opacity-90">Human review required</div>
+          )}
+        </div>
+
+        {/* Constraint Violations */}
+        {d.constraint_violations.length > 0 && (
+          <Alert variant="destructive">
+            <AlertTitle>Constraint Violations</AlertTitle>
+            <AlertDescription>
+              <ul className="list-disc list-inside mt-2">
+                {d.constraint_violations.map((v, i) => (
+                  <li key={i}>{v}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Summary Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{evaluation.proposalVersion.title}</CardTitle>
+            <CardDescription>
+              Proposal v{evaluation.proposalVersion.version} evaluated against Mandate v{evaluation.mandateVersion.version}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p>{d.summary}</p>
+
+            <div className="flex items-center gap-4">
+              <div>
+                <span className="text-sm text-muted-foreground">Confidence:</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-2 cursor-help">
+                      <div className="w-32 h-2 bg-secondary rounded-full overflow-hidden">
+                        <div className="h-full bg-primary" style={{ width: `${d.confidence * 100}%` }} />
+                      </div>
+                      <span className="font-medium">{(d.confidence * 100).toFixed(0)}%</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <ul className="text-sm">
+                      {d.confidence_reasons.map((r, i) => <li key={i}>{r}</li>)}
+                    </ul>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Separator orientation="vertical" className="h-6" />
+              <div>
+                <span className="text-sm text-muted-foreground">Tradeoff Score:</span>
+                <span className="ml-2 font-medium">{(d.tradeoff_score * 100).toFixed(0)}%</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Impact Estimate */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Impact Estimate</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-4 gap-4">
+              {Object.entries(d.impact_estimate).map(([key, value]) => (
+                <div key={key} className="text-center p-4 bg-secondary rounded-lg">
+                  <div className="text-sm text-muted-foreground capitalize">{key}</div>
+                  <div className="font-medium mt-1">{value}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Top 3 Unseen Risks */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Top 3 Unseen Risks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ol className="list-decimal list-inside space-y-2">
+              {d.unseen_risks.top_3_unseen_risks.map((r, i) => (
+                <li key={i} className="text-sm">{r}</li>
+              ))}
+            </ol>
+          </CardContent>
+        </Card>
+
+        {/* Risk Categories */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Risk Analysis</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {[
+              { key: 'implicit_assumptions', label: 'Implicit Assumptions' },
+              { key: 'second_order_effects', label: 'Second-Order Effects' },
+              { key: 'tail_risks', label: 'Tail Risks' },
+              { key: 'metric_gaming_vectors', label: 'Metric Gaming Vectors' },
+              { key: 'cross_functional_impacts', label: 'Cross-Functional Impacts' },
+            ].map(({ key, label }) => {
+              const items = d.unseen_risks[key as keyof typeof d.unseen_risks] as RiskItem[]
+              return (
+                <Collapsible key={key}>
+                  <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 hover:bg-secondary rounded">
+                    <span>{label}</span>
+                    <Badge variant="secondary">{items?.length || 0}</Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pl-4 pt-2">
+                    {items?.map((item, i) => (
+                      <div key={i} className="py-2 border-b last:border-0">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={item.severity === 'high' ? 'destructive' : item.severity === 'med' ? 'default' : 'secondary'}>
+                            {item.severity}
+                          </Badge>
+                          <span className="text-sm">{item.risk}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Evidence needed: {item.evidence_needed}
+                        </div>
+                      </div>
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
+              )
+            })}
+          </CardContent>
+        </Card>
+
+        {/* Required Evidence */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Required Next Evidence</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc list-inside space-y-1">
+              {d.required_next_evidence.map((e, i) => (
+                <li key={i} className="text-sm">{e}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+
+        {/* Override Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Override Decision</CardTitle>
+            <CardDescription>
+              Provide justification to override the system recommendation
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Your Name</label>
+              <input
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={overrideForm.actor}
+                onChange={(e) => setOverrideForm({ ...overrideForm, actor: e.target.value })}
+                placeholder="jane@company.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Decision</label>
+              <Select value={overrideForm.decision} onValueChange={(v) => setOverrideForm({ ...overrideForm, decision: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select decision" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="APPROVE">Approve</SelectItem>
+                  <SelectItem value="REJECT">Reject</SelectItem>
+                  <SelectItem value="ESCALATE">Escalate</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Rationale (min 20 characters)</label>
+              <textarea
+                className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={overrideForm.rationale}
+                onChange={(e) => setOverrideForm({ ...overrideForm, rationale: e.target.value })}
+                placeholder="Explain why you are overriding the recommendation..."
+              />
+            </div>
+            <Button
+              onClick={submitOverride}
+              disabled={submitting || overrideForm.rationale.length < 20}
+            >
+              {submitting ? 'Submitting...' : 'Submit Override'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Audit Log */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Audit Log</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {evaluation.overrides.map((o) => (
+                <div key={o.id} className="border-l-2 border-primary pl-4 py-2">
+                  <div className="text-sm text-muted-foreground">
+                    {new Date(o.createdAt).toLocaleString()}
+                  </div>
+                  <div className="font-medium">
+                    Override: {o.decision} by {o.actor}
+                  </div>
+                  <div className="text-sm mt-1">
+                    Rationale: {o.rationale}
+                  </div>
+                </div>
+              ))}
+              <div className="border-l-2 border-secondary pl-4 py-2">
+                <div className="text-sm text-muted-foreground">
+                  {new Date(evaluation.createdAt).toLocaleString()}
+                </div>
+                <div className="font-medium">Evaluation created (system)</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </TooltipProvider>
+  )
+}
+```
+
+**Step 2: Commit**
+
+```bash
+git add app/evaluations/\[id\]/page.tsx
+git commit -m "feat: add evaluation page with executive view"
+```
+
+---
+
+## Phase 6: Testing Harness
+
+### Task 24: Dev Harness Page
+
+**Files:**
+- Create: `app/dev/harness/page.tsx`
+
+**Step 1: Create harness page**
+
+Create `app/dev/harness/page.tsx`:
+
+```typescript
+'use client'
+
+import { useEffect, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+
+interface Proposal {
+  id: string
+  versions: Array<{ id: string; version: number; title: string }>
+}
+
+interface EvaluationResult {
+  valid: boolean
+  errors: string[]
+  recommendation: string
+  humanRequired: boolean
+  confidence: number
+  constraintViolations: string[]
+  escalationTriggers: string[]
+  raw: unknown
+}
+
+export default function HarnessPage() {
+  const [proposals, setProposals] = useState<Proposal[]>([])
+  const [selectedProposalId, setSelectedProposalId] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [running, setRunning] = useState(false)
+  const [result, setResult] = useState<EvaluationResult | null>(null)
+
+  useEffect(() => {
+    fetchProposals()
+  }, [])
+
+  async function fetchProposals() {
+    const res = await fetch('/api/proposals')
+    const data = await res.json()
+    setProposals(data)
+    setLoading(false)
+  }
+
+  async function runEvaluation() {
+    const proposal = proposals.find(p => p.id === selectedProposalId)
+    if (!proposal || !proposal.versions[0]) return
+
+    setRunning(true)
+    setResult(null)
+
+    try {
+      const res = await fetch('/api/evaluations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proposalVersionId: proposal.versions[0].id }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setResult({
+          valid: false,
+          errors: [data.error || 'Unknown error'],
+          recommendation: '',
+          humanRequired: false,
+          confidence: 0,
+          constraintViolations: [],
+          escalationTriggers: [],
+          raw: data,
+        })
+      } else {
+        const d = data.decisionObject
+        const escalationTriggers: string[] = []
+
+        if (d.constraint_violations.length > 0) {
+          escalationTriggers.push('Constraint violations')
+        }
+        if (d.confidence < 0.4) {
+          escalationTriggers.push('Low confidence')
+        }
+        if (d.unseen_risks.tail_risks?.some((r: { severity: string }) => r.severity === 'high')) {
+          escalationTriggers.push('High-severity tail risk')
+        }
+
+        setResult({
+          valid: true,
+          errors: [],
+          recommendation: d.recommendation,
+          humanRequired: d.human_required,
+          confidence: d.confidence,
+          constraintViolations: d.constraint_violations,
+          escalationTriggers,
+          raw: d,
+        })
+      }
+    } catch (e) {
+      setResult({
+        valid: false,
+        errors: [String(e)],
+        recommendation: '',
+        humanRequired: false,
+        confidence: 0,
+        constraintViolations: [],
+        escalationTriggers: [],
+        raw: null,
+      })
+    }
+
+    setRunning(false)
+  }
+
+  if (loading) return <div>Loading...</div>
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Evaluation Harness</h1>
+        <p className="text-muted-foreground mt-2">
+          Test evaluation pipeline on seeded proposals
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Run Evaluation</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-4">
+            <Select value={selectedProposalId} onValueChange={setSelectedProposalId}>
+              <SelectTrigger className="w-[300px]">
+                <SelectValue placeholder="Select proposal" />
+              </SelectTrigger>
+              <SelectContent>
+                {proposals.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.versions[0]?.title || 'Untitled'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={runEvaluation} disabled={!selectedProposalId || running}>
+              {running ? 'Running...' : 'Run Evaluation'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {result && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Result
+              {result.valid ? (
+                <Badge variant="default">Valid</Badge>
+              ) : (
+                <Badge variant="destructive">Invalid</Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {result.errors.length > 0 && (
+              <div className="text-destructive">
+                <strong>Errors:</strong>
+                <ul className="list-disc list-inside">
+                  {result.errors.map((e, i) => <li key={i}>{e}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {result.valid && (
+              <>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <span className="text-sm text-muted-foreground">Recommendation</span>
+                    <div className="font-bold text-lg">{result.recommendation}</div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-muted-foreground">Human Required</span>
+                    <div className="font-bold text-lg">{result.humanRequired ? 'Yes' : 'No'}</div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-muted-foreground">Confidence</span>
+                    <div className="font-bold text-lg">{(result.confidence * 100).toFixed(0)}%</div>
+                  </div>
+                </div>
+
+                {result.constraintViolations.length > 0 && (
+                  <div>
+                    <span className="text-sm text-muted-foreground">Constraint Violations</span>
+                    <ul className="list-disc list-inside text-destructive">
+                      {result.constraintViolations.map((v, i) => <li key={i}>{v}</li>)}
+                    </ul>
+                  </div>
+                )}
+
+                {result.escalationTriggers.length > 0 && (
+                  <div>
+                    <span className="text-sm text-muted-foreground">Escalation Triggers</span>
+                    <div className="flex gap-2 mt-1">
+                      {result.escalationTriggers.map((t, i) => (
+                        <Badge key={i} variant="secondary">{t}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <span className="text-sm text-muted-foreground">Raw Output</span>
+                  <pre className="mt-2 p-4 bg-secondary rounded text-xs overflow-auto max-h-[400px]">
+                    {JSON.stringify(result.raw, null, 2)}
+                  </pre>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}
+```
+
+**Step 2: Commit**
+
+```bash
+git add app/dev/harness/page.tsx
+git commit -m "feat: add dev harness page for testing"
+```
+
+---
+
+### Task 25: CLI Harness Script
+
+**Files:**
+- Create: `scripts/harness.ts`
+
+**Step 1: Create CLI harness**
+
+Create `scripts/harness.ts`:
+
+```typescript
+import { PrismaClient } from '@prisma/client'
+import { evaluateProposal } from '../lib/engine/pipeline'
+import { DecisionObjectSchema } from '../lib/ai/schemas'
+
+const prisma = new PrismaClient()
+
+async function main() {
+  const args = process.argv.slice(2)
+  const proposalIdArg = args.find(a => a.startsWith('--proposal='))
+  const specificProposalId = proposalIdArg?.split('=')[1]
+
+  console.log('='.repeat(60))
+  console.log('MANDATE EVALUATION HARNESS')
+  console.log('='.repeat(60))
+
+  // Get active mandate
+  const mandateVersion = await prisma.mandateVersion.findFirst({
+    where: { isActive: true },
+  })
+
+  if (!mandateVersion) {
+    console.error('ERROR: No active mandate version')
+    process.exit(1)
+  }
+
+  console.log(`Using Mandate v${mandateVersion.version}`)
+  console.log('')
+
+  // Get proposals
+  const proposals = await prisma.proposal.findMany({
+    where: specificProposalId ? { id: specificProposalId } : undefined,
+    include: {
+      versions: {
+        orderBy: { version: 'desc' },
+        take: 1,
+      },
+    },
+  })
+
+  if (proposals.length === 0) {
+    console.error('ERROR: No proposals found')
+    process.exit(1)
+  }
+
+  let allPassed = true
+
+  for (const proposal of proposals) {
+    const version = proposal.versions[0]
+    if (!version) continue
+
+    console.log('-'.repeat(60))
+    console.log(`PROPOSAL: ${version.title}`)
+    console.log('-'.repeat(60))
+
+    try {
+      const { decisionObject, trace } = await evaluateProposal({
+        mandate: {
+          weights: JSON.parse(mandateVersion.weights),
+          riskTolerance: mandateVersion.riskTolerance as 'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE',
+          nonNegotiables: JSON.parse(mandateVersion.nonNegotiables),
+        },
+        proposal: {
+          title: version.title,
+          summary: version.summary,
+          scope: version.scope,
+          assumptions: JSON.parse(version.assumptions),
+          dependencies: JSON.parse(version.dependencies),
+        },
+      })
+
+      // Validate schema
+      const validation = DecisionObjectSchema.safeParse(decisionObject)
+
+      if (!validation.success) {
+        console.log('SCHEMA VALIDATION: FAIL')
+        console.log(validation.error.message)
+        allPassed = false
+      } else {
+        console.log('SCHEMA VALIDATION: PASS')
+      }
+
+      console.log('')
+      console.log(`Recommendation: ${decisionObject.recommendation}`)
+      console.log(`Human Required: ${decisionObject.human_required}`)
+      console.log(`Confidence: ${(decisionObject.confidence * 100).toFixed(0)}%`)
+      console.log(`Tradeoff Score: ${(decisionObject.tradeoff_score * 100).toFixed(0)}%`)
+
+      if (decisionObject.constraint_violations.length > 0) {
+        console.log('')
+        console.log('CONSTRAINT VIOLATIONS:')
+        decisionObject.constraint_violations.forEach(v => console.log(`  - ${v}`))
+      }
+
+      // Check escalation triggers
+      const triggers: string[] = []
+      if (decisionObject.constraint_violations.length > 0) triggers.push('constraint_violation')
+      if (decisionObject.confidence < 0.4) triggers.push('low_confidence')
+      if (decisionObject.unseen_risks.tail_risks?.some(r => r.severity === 'high')) {
+        triggers.push('high_severity_tail_risk')
+      }
+
+      if (triggers.length > 0) {
+        console.log('')
+        console.log('ESCALATION TRIGGERS:')
+        triggers.forEach(t => console.log(`  - ${t}`))
+      }
+
+      console.log('')
+      console.log(`Model: ${trace.model} (${trace.latencyMs}ms)`)
+      if (trace.failures.length > 0) {
+        console.log('FAILURES:')
+        trace.failures.forEach(f => console.log(`  - ${f.stage}: ${f.error}`))
+      }
+
+    } catch (error) {
+      console.log('EVALUATION FAILED:', error)
+      allPassed = false
+    }
+
+    console.log('')
+  }
+
+  console.log('='.repeat(60))
+  console.log(allPassed ? 'ALL EVALUATIONS PASSED' : 'SOME EVALUATIONS FAILED')
+  console.log('='.repeat(60))
+
+  process.exit(allPassed ? 0 : 1)
+}
+
+main()
+  .catch(console.error)
+  .finally(() => prisma.$disconnect())
+```
+
+**Step 2: Add script to package.json**
+
+Add to `package.json` scripts:
+
+```json
+{
+  "scripts": {
+    "harness": "tsx scripts/harness.ts"
+  }
+}
+```
+
+**Step 3: Commit**
+
+```bash
+git add scripts/harness.ts package.json
+git commit -m "feat: add CLI evaluation harness"
+```
+
+---
+
+## Phase 7: Documentation
+
+### Task 26: README
+
+**Files:**
+- Create: `README.md`
+
+**Step 1: Create README**
+
+Create `README.md`:
+
+```markdown
+# Mandate
+
+AI-native decision governance system. AI owns risk discovery and tradeoff analysis. Humans retain accountability for values, priorities, and irreversible decisions.
+
+## Quick Start
+
+```bash
+# Install dependencies
+pnpm install
+
+# Set up database
+pnpm prisma migrate dev
+
+# Seed demo data
+pnpm prisma db seed
+
+# Start development server
+pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+## Environment Variables
+
+Create `.env`:
+
+```env
+DATABASE_URL="file:./dev.db"
+
+# Optional: For real AI risk discovery (falls back to realistic mocks)
+OPENAI_API_KEY=your-key-here
+OPENAI_BASE_URL=https://api.openai.com/v1  # Or compatible endpoint
+OPENAI_MODEL=gpt-4o
+```
+
+## Demo Script (2-3 min)
+
+### 1. Show the Mandate (30s)
+- Navigate to `/mandate`
+- Point out: priorities (growth, cost, risk, brand weights), risk tolerance, non-negotiables
+- "This is what the organization has decided matters. AI can't change this."
+
+### 2. Evaluate a Good Proposal (45s)
+- Go to `/proposals` → click "APAC Market Expansion"
+- Click "Evaluate Against Mandate"
+- Walk through the Decision Object:
+  - Recommendation banner (APPROVE)
+  - Impact estimates
+  - Top 3 unseen risks (AI-discovered)
+  - Confidence score with reasons
+- "AI found risks humans might miss. But the recommendation is advisory."
+
+### 3. Trigger Escalation (45s)
+- Go back to `/proposals` → click "Operational Efficiency Initiative"
+- Evaluate it
+- Show: ESCALATE recommendation, constraint violation (mentions layoffs), human_required=true
+- "The system detected a non-negotiable violation. It refuses to approve."
+
+### 4. Override Flow (30s)
+- Still on evaluation page, scroll to Override section
+- Enter your name, select APPROVE, type rationale (20+ chars)
+- Submit
+- Show audit log at bottom
+- "Human can override, but must justify. Everything is logged."
+
+### 5. Low Confidence Case (30s)
+- Evaluate "Innovation Lab Setup"
+- Show: ESCALATE due to low confidence
+- Point out missing assumptions, vague scope
+- "AI knows when it doesn't have enough information."
+
+## Human Boundaries
+
+**AI Owns:**
+- Risk discovery (implicit assumptions, second-order effects, tail risks)
+- Tradeoff scoring against mandate weights
+- Confidence computation
+- Escalation triggers
+
+**Human Owns:**
+- Setting the mandate (priorities, risk tolerance, non-negotiables)
+- Final approval/rejection decisions
+- Override authority with justification
+- Defining what "non-negotiable" means
+
+## Reproducibility
+
+Every evaluation captures:
+- `inputsSnapshot`: Frozen mandate + proposal at evaluation time
+- `modelTrace`: Provider, model, prompt version, latency
+- Checksums on all versioned entities
+
+Re-running with the same inputs and prompt version produces identical deterministic scores. LLM output may vary but is captured in trace.
+
+## Testing
+
+```bash
+# Run CLI harness on all seeded proposals
+pnpm harness
+
+# Run on specific proposal
+pnpm harness --proposal=<proposal-id>
+
+# Or use the UI at /dev/harness
+```
+
+## What Breaks at Scale
+
+| Limitation | Production Fix |
+|------------|----------------|
+| SQLite (single-writer) | PostgreSQL with connection pooling |
+| Sync evaluation (blocks 5-10s) | Background jobs + SSE/polling |
+| No authentication | NextAuth + RBAC |
+| No rate limiting | Token budgets per evaluation |
+| Single prompt version | Prompt management + A/B testing |
+| In-memory only | Redis for caching + job queue |
+
+## Architecture
+
+```
+lib/engine/           # Deterministic evaluation logic
+  ├── featureBuilder    # Extract proposal features
+  ├── deterministicScorer # Impact/tradeoff scoring
+  ├── escalationPolicy  # Human-required rules
+  ├── confidenceComputation
+  └── pipeline          # Orchestrates flow
+
+lib/ai/               # AI integration
+  ├── client           # OpenAI SDK wrapper
+  ├── riskDiscovery    # LLM risk analysis
+  ├── prompts          # Prompt templates
+  ├── mock             # Demo mode responses
+  └── jsonGuard        # Strict JSON validation
+
+app/api/              # Next.js Route Handlers
+app/                  # React pages
+prisma/               # Database schema + seed
+```
+
+## License
+
+MIT
+```
+
+**Step 2: Commit**
+
+```bash
+git add README.md
+git commit -m "docs: add README with setup and demo script"
+```
+
+---
+
+## Summary
+
+**Total Tasks:** 26
+
+**Phases:**
+1. Project Setup (Tasks 1-4)
+2. Core Engine (Tasks 5-13)
+3. Database Seed (Task 14)
+4. API Routes (Tasks 15-18)
+5. UI Pages (Tasks 19-23)
+6. Testing Harness (Tasks 24-25)
+7. Documentation (Task 26)
+
+---
+
+Plan complete and saved to `docs/plans/2026-02-24-mandate-implementation.md`.
+
+**Two execution options:**
+
+**1. Subagent-Driven (this session)** - I dispatch fresh subagent per task, review between tasks, fast iteration
+
+**2. Parallel Session (separate)** - Open new session with executing-plans, batch execution with checkpoints
+
+**Which approach?**
